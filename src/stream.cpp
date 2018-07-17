@@ -15,7 +15,7 @@ void print_help()
 {
     std::cout << "Use console commands: " << std::endl
         << "url [1,2,3,4] <url>: set url for stream. url can be system variable $VAR" << std::endl
-        << "e or exit: exit programm" << std::endl
+        << "q or quit: exit programm" << std::endl
         << "cfg : reload from config" << std::endl
         << "help: show this message" << std::endl;
 }
@@ -170,6 +170,6 @@ int main(int argc, char **argv)
     
     std::this_thread::sleep_for(std::chrono::seconds(5));
     
-    return 1;
+    return 0;
 }
 
