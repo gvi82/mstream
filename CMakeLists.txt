@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 2.5)
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
     set(ENV{PKG_CONFIG_PATH}  "/home/gvi/ffmpegd_build/lib/pkgconfig")

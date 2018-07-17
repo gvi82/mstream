@@ -145,13 +145,8 @@ public:
                 tb.num = 24; // try guess
                 tb.den = 1;
             }
-            AVFrame* f;
-            
-            /*m_frame->coded_picture_number*/
+
             double pts = m_frame_num/av_q2d(tb)*1000;
-            //double pts = f->best_effort_timestamp;
-            //pts*=av_q2d(tb);
-            //double pts = m_frame->best_ /av_q2d(tb)*1000;
             m_frame_num++;
             
             double currtime = av_gettime() / 1000.0;
@@ -160,10 +155,6 @@ public:
             }
             
             frame->pts = pts + m_decode_begin;
-            
-            /*if (currtime - frame->pts > 2000) {
-                m_decode_begin += (currtime - frame->pts);
-            }*/
                 
             m_last_pts = frame->pts;
             
