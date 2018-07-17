@@ -28,8 +28,8 @@ void trace_log(const std::string& str, bool copy_to_console = false);
 
 struct app_config
 {
-    int m_dest_height = 960;
-    int m_dest_wight = 1280;
+    int m_dest_wight = 640;
+    int m_dest_height = 480;
     size_t m_max_frames_in_queue = 1000;
 };
 

@@ -34,13 +34,15 @@ public:
     
     ~decoder()
     {
+        m_consumer->reset_queue(m_pos);
+        send_frame(true);
+        
         if (m_fmt)
             avformat_close_input(&m_fmt);
         if (m_dec_ctx)
             avcodec_free_context(&m_dec_ctx);
         if (m_sws)
             sws_freeContext(m_sws);
-        m_consumer->reset_queue(m_pos);
     }
     
     void init(std::string filename)
@@ -88,7 +90,7 @@ public:
     double m_last_pts = 0;
     double m_decode_begin = 0;
     
-    void decode_frame(i_frame_consumer& consumer, stream_position pos)
+    void decode_frame()
     {
         AVPacket packet = {};
         AutoFree free_packet([&packet](){av_packet_unref(&packet);});
@@ -117,50 +119,63 @@ public:
                 return;
             else if (ret < 0)
                 throw std::logic_error("Error during decoding");
-            
-            uint8_t *input[4];
-            int px[4], py[4];
-            
-            for (int k = 0; m_frame->data[k]; k++)
-                input[k] = m_frame->data[k] + py[k] * m_frame->linesize[k] + px[k];
-            
-            AVFramePtr frame = make_frame_ptr(av_frame_alloc());
-
-            frame->format = AV_PIX_FMT_YUV420P;
-            frame->width  = get_app_config().m_dest_wight/2;
-            frame->height = get_app_config().m_dest_height/2;
-            
-            ret = av_frame_get_buffer(frame.get(), 0);
-            if (ret < 0)
-                throw std::logic_error("Error allocate buffer");
-            
-            // prepare frame with need size in decode thread
-            sws_scale(m_sws,
-                        m_frame->data, m_frame->linesize,
-                        0, m_dec_ctx->height, 
-                        frame->data, frame->linesize);
-
-            AVRational tb = m_dec_ctx->framerate;
-            if (!tb.den) {
-                tb.num = 24; // try guess
-                tb.den = 1;
-            }
-
-            double pts = m_frame_num/av_q2d(tb)*1000;
-            m_frame_num++;
-            
-            double currtime = av_gettime() / 1000.0;
-            if (!m_decode_begin) {
-                m_decode_begin = currtime;
-            }
-            
-            frame->pts = pts + m_decode_begin;
-                
-            m_last_pts = frame->pts;
-            
-            LOGD("frame pts " << pts << " show frame time " << frame->pts << " pic num " <<  m_frame->coded_picture_number);
-            consumer.append_frame(frame, pos);
+            send_frame();
         }
+    }
+    
+    void send_frame(bool black = false)
+    {
+        AVFramePtr frame = make_frame_ptr(av_frame_alloc());
+
+        frame->format = AV_PIX_FMT_YUV420P;
+        frame->width  = get_app_config().m_dest_wight/2;
+        frame->height = get_app_config().m_dest_height/2;
+        
+        int ret = av_frame_get_buffer(frame.get(), 0);
+        if (ret < 0)
+            throw std::logic_error("Error allocate buffer");
+        
+        // prepare frame with need size in decode thread
+        sws_scale(m_sws,
+                    m_frame->data, m_frame->linesize,
+                    0, m_dec_ctx->height, 
+                    frame->data, frame->linesize);
+        if (black)
+        {
+            for (int y = 0; y < frame->height; y++) {
+                for (int x = 0; x < frame->width; x++) {
+                    frame->data[0][y * frame->linesize[0] + x] = 0;
+                }
+            }
+    
+            for (int y = 0; y < frame->height/2; y++) {
+                for (int x = 0; x < frame->width/2; x++) {
+                    frame->data[1][y * frame->linesize[1] + x] = 0;
+                    frame->data[2][y * frame->linesize[2] + x] = 0;
+                }
+            }
+        }
+
+        AVRational tb = m_dec_ctx->framerate;
+        if (!tb.den) {
+            tb.num = 24; // try guess
+            tb.den = 1;
+        }
+
+        double pts = m_frame_num/av_q2d(tb)*1000;
+        m_frame_num++;
+        
+        double currtime = av_gettime() / 1000.0;
+        if (!m_decode_begin) {
+            m_decode_begin = currtime;
+        }
+        
+        frame->pts = pts + m_decode_begin;
+            
+        m_last_pts = frame->pts;
+        
+        LOGD("frame pts " << pts << " show frame time " << frame->pts << " pic num " <<  m_frame->coded_picture_number);
+        m_consumer->append_frame(frame, m_pos);
     }
 };
 
@@ -219,6 +234,8 @@ public:
     {
         while(1) {
             try_new_url();
+            if (m_current_url.empty())
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             
             if (m_consumer->done())
                 return;
@@ -228,7 +245,7 @@ public:
             
             try
             {
-                m_decoder->decode_frame(*m_consumer, m_pos);
+                m_decoder->decode_frame();
             }
             catch(std::exception& e)
             {

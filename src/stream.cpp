@@ -67,7 +67,7 @@ process_action process_cmd(const std::string& input, int& stream_num, std::strin
             try{
                 stream_num = std::stoi(s);
             } catch(...) {}
-            if (stream_num < 1 && stream_num > 4) {
+            if (stream_num < 1 || stream_num > 4) {
                 std::cout << "Stream num should be between 1 and 4" << std::endl;
                 return process_action::error;
             }

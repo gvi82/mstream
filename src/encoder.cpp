@@ -286,6 +286,8 @@ public:
             }
             else
                 m_encoder->display_frame();
+        } else {
+          std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         
         return true;
