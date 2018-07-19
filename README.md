@@ -16,7 +16,7 @@ make
 ulr 1 <url> - top left\
 ulr 2 <url> - top right\
 ulr 3 <url> - bottom left\
-ulr 4 <url> - bottom bottom\
+ulr 4 <url> - bottom right\
 \
 из командной строки доступны команды \
 \

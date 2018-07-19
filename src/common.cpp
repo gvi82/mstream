@@ -45,6 +45,7 @@ namespace
 {
     std::ofstream m_file_log;
     std::mutex g_log_mutex;
+    std::mutex g_thred_reg_mx;
 }
 
 void initialize_log()
@@ -71,10 +72,12 @@ std::string thread_name(const std::thread::id& id)
 
 void register_thread(const std::thread::id& id, const std::string& name)
 {
+    std::unique_lock<std::mutex> lock(g_thred_reg_mx);
+    
     for(size_t i = 0; i < m_threads.size(); ++i) {
         if (m_threads[i].first == std::thread::id()) {
-            m_threads[i].second = name; // init name first for avoid raise condition
             m_threads[i].first = id;
+            m_threads[i].second = name;
             break;
         }
     }

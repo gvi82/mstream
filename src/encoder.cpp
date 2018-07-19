@@ -22,6 +22,8 @@ static uint32_t sdl_refresh_timer(uint32_t interval, void *opaque) {
 namespace mstream
 {
 
+extern bool g_unloaded;
+
 static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
                      char *filename)
 {
@@ -63,6 +65,7 @@ public:
             SDL_FreeYUVOverlay(m_bmp);
         if (m_img_convert_context)
             sws_freeContext(m_img_convert_context);
+        g_unloaded = true;
     }
     
     void init_player()

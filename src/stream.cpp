@@ -8,6 +8,10 @@
 #include <thread>
 #include <chrono>
 
+namespace mstream {
+    bool g_unloaded = false;
+}
+
 using namespace mstream;
 
 namespace {
@@ -167,8 +171,23 @@ int main(int argc, char **argv)
     
     decoders.clear();
     cons->set_done();
+    cons.reset();
     
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    auto start = std::chrono::system_clock::now();
+    
+    int last_diff = 0;
+    while(!g_unloaded) {
+        std::chrono::duration<double> diff = std::chrono::system_clock::now()-start;
+        if (last_diff != (int)diff.count()) {
+            last_diff = (int)diff.count();
+            LOG_CONS("waiting uloading " << last_diff << "...");
+        }
+        if (diff.count() > 10) {
+            LOG_CONS("force quit");
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
     
     return 0;
 }

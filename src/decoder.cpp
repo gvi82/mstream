@@ -34,8 +34,10 @@ public:
     
     ~decoder()
     {
-        m_consumer->reset_queue(m_pos);
-        send_frame(true);
+        if (!m_consumer->done()) {
+            m_consumer->reset_queue(m_pos);
+            send_frame(true);
+        }
         
         if (m_fmt)
             avformat_close_input(&m_fmt);
@@ -232,16 +234,13 @@ public:
     
     void produce()
     {
-        while(1) {
+        while(!m_consumer->done()) {
             try_new_url();
-            if (m_current_url.empty())
+
+            if (!m_decoder) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
-            if (m_consumer->done())
-                return;
-            
-            if (!m_decoder)
                 continue;
+            }
             
             try
             {
@@ -266,7 +265,7 @@ public:
             }
             catch(std::exception& e)
             {
-                LOG_CONS("Exception on consumer thread " << e.what());
+                LOG_CONS("Exception on decoder thread " << e.what());
             }
             
             LOG("Thread stopped " << std::this_thread::get_id());
